@@ -1,0 +1,17 @@
+<credenciais>
+    <twitter>
+        <email></email>
+        <username></username>
+        <senha></senha>
+    </twitter>
+    <instagram>
+        <email></email>
+        <username></username>
+        <senha></senha>
+    </instagram>
+    <facebook>
+        <email></email>
+        <username></username>
+        <senha></senha>
+    </facebook>
+</credenciais>

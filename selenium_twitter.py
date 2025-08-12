@@ -1,20 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
-from time import sleep
-import pandas as pd
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from time import sleep
 from parsel import Selector
 
 #credenciais
-with open("conta.xml", "r", encoding="utf-8") as f:
+with open("credenciais.xml", "r", encoding="utf-8") as f:
     credenciais = f.read()
 
 sel = Selector(text=credenciais)
 # Extrai o texto da tag <email>
-email = sel.xpath("//email/text()").get()
-senha =sel.xpath("//senha/text()").get()
+email = sel.xpath("//twitter/email/text()").get()
+#senha =sel.xpath("//twitter/senha/text()").get()
 
 #login no twitter
 driver = webdriver.Chrome() #inicialização
