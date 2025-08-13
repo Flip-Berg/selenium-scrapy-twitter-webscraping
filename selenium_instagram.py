@@ -40,6 +40,11 @@ not_now_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((
 )))
 not_now_button.click()
 
+#TODO: not working
+search_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((
+    By.XPATH, "//a[@href='#' and role='link']"
+)))
+search_button.click()
 
 input()
 sleep(1)
