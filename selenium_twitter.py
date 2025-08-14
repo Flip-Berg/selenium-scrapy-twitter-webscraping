@@ -10,7 +10,7 @@ import random
 def human_typing(element, text):
     for c in text:
         element.send_keys(c)
-        sleep(random.uniform(0.01, 0.05))  # delay aleatório entre teclas
+        sleep(random.uniform(0.005, 0.02))  # delay aleatório entre teclas
 
 #credenciais
 with open("credenciais.xml", "r", encoding="utf-8") as f:
