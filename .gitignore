@@ -8,3 +8,4 @@ env/
 Thumbs.db
 *.log
 *.tmp
+#uece_posts_data.json
