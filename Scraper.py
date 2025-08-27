@@ -15,7 +15,7 @@ class Scraper:
         return email, senha
     
 
-    def scrape_post_text(self, post_html, JsonManager):
+    def scrape_post_text(self, post_html, tag, JsonManager):
         post_selector = Selector(text=post_html)
 
         post_description = post_selector.xpath('string(.//h1)').get() #[role="presentation"] div > h1::text
@@ -41,7 +41,7 @@ class Scraper:
             })
 
         post_data = {
-            "descricao": post_description,
-            "comentarios": comments
+            "descricao": post_description if post_description else "Sem descrição",
+            "comentarios": comments if comments else "Sem comentários"
         }
-        JsonManager.save_on_json(post_data)
+        JsonManager.save_on_json(tag, post_data)

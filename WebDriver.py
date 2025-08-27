@@ -1,27 +1,102 @@
+from configparser import NoSectionError
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from lxml import etree
+from time import sleep
 
 class WebDriver:
 
     def __init__(self, driver, wait):
         self.driver = driver
         self.wait = wait
+        self._loading_attempts = 0
+        self._max_loading_attempts = 3
 
     def go_to_url(self, url):
         self.driver.get(url)
 
 
+    # Variável de classe para controlar tentativas de loading
+    
+    #TODO: fix loading
+    def wait_document_ready(self):
+        """Espera o documento estar completamente carregado"""
+        try:
+            WebDriverWait(self.driver, 5).until(
+                lambda d: d.execute_script('return document.readyState') == 'complete'
+            )
+            print("Documento carregado")
+            return True
+        except TimeoutException:
+            print("Aviso: Documento não carregou no tempo limite")
+            return False
+        except Exception as e:
+            print(f"Erro desconhecido: {e}")
+            return False
+
+    def wait_spinner(self):
+        """Espera o spinner desaparecer, se existir"""
+        try:
+            # Primeiro verifica se o spinner está presente (timeout curto)
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, self.spinner_selector))
+            )
+            print("spinner encontrado, aguardando desaparecer...")
+            # Espera até que desapareça por 2 minutos
+            WebDriverWait(self.driver, 120).until(
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, self.spinner_selector))
+            )
+            print("Carregamento concluído")
+            return True
+        except TimeoutException:
+            print("Spinner não encontrado ou não desapareceu a tempo")
+            return True  # Retorna True porque ausência de spinner também é válido
+        except NoSuchElementException:
+            print("Nenhum elemento de carregamento encontrado, continuando...")
+            return True
+        except WebDriverException as e:
+            print(f"Erro interno do WebDriver: {e}")
+            return False
+        except Exception as e:
+            print(f"Erro desconhecido: {e}")
+            return False
+
+    def loading_2(self):
+        """Função principal de espera de carregamento, com tentativas limitadas"""
+        while self._loading_attempts < self._max_loading_attempts:
+            self._loading_attempts += 1
+            print(f"Tentativa de carregamento #{self._loading_attempts}...")
+
+            doc_ready = self.wait_document_ready()
+            spinner_done = self.wait_spinner()
+
+            if doc_ready and spinner_done:
+                # Reset contador e encerra
+                self._loading_attempts = 0
+                return
+
+            print("Tentativa falhou, aguardando 2s antes da próxima tentativa...")
+            time.sleep(2)
+
+        # Se atingir o máximo de tentativas
+        print("Número máximo de tentativas de carregamento atingido. Desistindo.")
+        self._loading_attempts = 0
+    
     def loading(self):
         #espera o fim do carregamento, se algo estiver carregando
-        loading = self.driver.find_elements(By.CSS_SELECTOR, '[aria-label*="Carregando"][data-visualcompletion="loading-state"][role="progressbar"]')
-        if loading:
+        try:
+            WebDriverWait(self.driver, 90).until(EC.invisibility_of_element_located(
+                    (By.CSS_SELECTOR, '[aria-label*="Carregando"][data-visualcompletion="loading-state"][role="progressbar"]')
+            ))        
             WebDriverWait(self.driver, 90).until(EC.invisibility_of_element_located(
                 (By.CSS_SELECTOR, '[aria-label*="Carregando"][data-visualcompletion="loading-state"][role="progressbar"]')
             ))
-
+        except:
+            print("Carregamento não finalizado")
+            sleep(30)
+                
 
     def login(self, email,senha):
         email_input = self.wait.until(EC.element_to_be_clickable((
