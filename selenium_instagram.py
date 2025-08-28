@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from Facade import Facade
-
+#TODO: abrir respostas, abrir novos posts ao chegar ao final
 #atributos globais
 driver = webdriver.Chrome(
     service = Service(ChromeDriverManager().install()),
@@ -29,5 +29,10 @@ def main():
     instagram_text_scraper.scrape_posts_text(num_posts)
     input()
 
+def main_2():
+    instagram_text_scraper = Facade(driver, wait, tag)
+    instagram_text_scraper.login()
+    instagram_text_scraper.go_to_posts()
+    instagram_text_scraper.traverse_posts()
 
-main()
+main_2()

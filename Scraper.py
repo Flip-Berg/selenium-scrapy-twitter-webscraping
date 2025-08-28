@@ -35,13 +35,16 @@ class Scraper:
                 if reply_text and not reply_text.endswith("ResponderOpções de comentários"):  # ignora vazios e não comentários
                     replies_text.append(reply_text)
 
-            comments.append({
-                "comentario": comment_text,
-                "respostas": replies_text
-            })
+            if comment_text: #ignora comentários vazios
+                comments.append({
+                    "comentario": comment_text,
+                    "respostas": replies_text
+                })
 
         post_data = {
-            "descricao": post_description if post_description else "Sem descrição",
-            "comentarios": comments if comments else "Sem comentários"
+            "descricao": post_description if post_description else "",
+            "comentarios": comments if comments else ""
         }
+        if post_data["descricao"] == "" and post_data["comentarios"] == "":
+            return #post vazio, não é salvo.
         JsonManager.save_on_json(tag, post_data)

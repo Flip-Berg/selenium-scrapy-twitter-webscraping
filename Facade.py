@@ -22,10 +22,12 @@ class Facade:
     def go_to_posts(self):
         #self.web_driver.search_tag(tag)
         self.web_driver.driver.get('https://www.instagram.com/explore/search/keyword/?q=%23uece') #tag uece
+        self.web_driver.loading_2()
         self.web_driver.click_on_first_post()
+        self.web_driver.driver.fullscreen_window()
 
     def scrape_post_text(self):
-        self.web_driver.driver.fullscreen_window()
+        
         self.web_driver.open_all_comments()
         post_html = self.web_driver.get_post_html()
         self.scraper.scrape_post_text(post_html, self.tag, self.json_manager)
@@ -38,4 +40,7 @@ class Facade:
             print(f"raspando o post nº {post_counter}")
             self.scrape_post_text()
         print("raspagem terminada")
-
+    #TODO
+    def traverse_posts(self):
+        while self.web_driver.go_to_next_post():
+            pass
