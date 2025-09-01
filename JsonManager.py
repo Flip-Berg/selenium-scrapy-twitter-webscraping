@@ -10,6 +10,9 @@ class JsonManager:
             os.remove(json_filename)
             print(f"Arquivo {json_filename} antigo foi apagado.")
 
+    def delete_previous_jsons(self, tags):
+        for tag in tags:
+            self.delete_previous_json(tag)
 
     def save_on_json(self, tag, post_data):
         json_filename = f"{tag}_posts_data.json"

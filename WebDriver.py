@@ -26,25 +26,31 @@ class WebDriver:
             WebDriverWait(self.driver, 5).until(
                 lambda d: d.execute_script('return document.readyState') == 'complete'
             )
-            print("Documento carregado")
+            #print("Documento carregado")
             return True
         except TimeoutException:
             print("Aviso: Documento não carregou no tempo limite")
             return False
         except Exception as e:
-            print(f"Erro desconhecido: {e}")
+            print(f"Erro inesperado em wait_document_ready: \n{e}")
             return False
 
     def wait_spinner(self):
         """Espera o spinner desaparecer, se existir"""
-        print("encontrando spinner")
+        #print("encontrando spinner")
         try:
             # Primeiro verifica se o spinner está presente (timeout curto)
-            spinner_selector = 'article [aria-label*="Carregando"], article [data-visualcompletion="loading-state"], article [role="progressbar"]'
-            spinner = WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, spinner_selector))
-            )
-            print("Spinner encontrado, aguardando desaparecer...")
+            try:
+                spinner_selector = 'article [data-visualcompletion="loading-state"], article [role="progressbar"]'
+                spinner = WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, spinner_selector))
+                )
+            except TimeoutException:
+                return True
+            except Exception as e:
+                print(f"Erro inesperado em wait_spinner ao tentar encontrar o spinner: \n{e}")
+                return False
+            #print("Spinner encontrado, aguardando desaparecer...")
             
             # Tenta rolar até o spinner para garantir visibilidade
             try:
@@ -53,138 +59,139 @@ class WebDriver:
                 pass
             
             # Espera até que desapareça
-            WebDriverWait(self.driver, 30).until(
+            self.wait.until(
                 EC.staleness_of(spinner)
             )
-            print("Spinner desapareceu")
+            #print("Spinner desapareceu")
             return True
         except TimeoutException as e:
-            print("Spinner demorou demais")
-            print("-ERRO-: "+ str(e))
+            #print("Spinner demorou demais")
+            #print("-ERRO-: "+ str(e))
             return None  # Retorna None para tratamento especial
         except NoSuchElementException:
-            print("Nenhum spinner encontrado, continuando...")
-            print("-ERRO-: "+ str(e))
+            #print("Nenhum spinner encontrado, continuando...")
+            #print("-ERRO-: "+ str(e))
             return True # Retorna True porque ausência de spinner também é válido
         except WebDriverException as e:
-            print(f"Erro interno do WebDriver: {e}")
+            print(f"Erro interno do WebDriver: \n{e}")
             return False
         except Exception as e:
-            print(f"Erro desconhecido: {e}")
+            print(f"Erro inesperado em wait_spinner: \n{e}")
             return False
 
     def wait_reply_spinner(self, spinner_index):
         """Espera o spinner de "Ver respostas" específico desaparecer, se existir"""
-        print("encontrando spinner de resposta"+ str(spinner_index))
+        #print("encontrando spinner de resposta "+ spinner_index+1)
         try:
             # Primeiro verifica se o spinner está presente (timeout curto)
-            spinner_selector = 'article ul ul [aria-label*="Carregando"], article ul ul [data-visualcompletion="loading-state"], article ul ul [role="progressbar"]'
-            spinners = WebDriverWait(self.driver, 5).until(
+            spinner_selector = 'article ul ul [data-visualcompletion="loading-state"], article ul ul [role="progressbar"]'
+            spinners = WebDriverWait(self.driver, 1, 0.2).until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, spinner_selector))
             )
-            print("Spinner de resposta "+ str(spinner_index)+" encontrado, aguardando desaparecer...")
+            if spinner_index == -1: #espera rapidamente cada spinner
+                for spinner in spinners:
+                    try:
+                        WebDriverWait(self.driver, 2).until(
+                            EC.staleness_of(spinner)
+                        )
+                    except:
+                        continue
+                return True
+
+            elif spinner_index < len(spinners):
+                #print("Spinner de resposta "+ str(spinner_index)+" encontrado, aguardando desaparecer...")
             
-            # Tenta rolar até o spinner para garantir visibilidade
-            try:
-                self.driver.execute_script("arguments[0].scrollIntoView(true);", spinners[spinner_index])
-            except:
-                pass
-            
-            # Espera até que desapareça
-            WebDriverWait(self.driver, 30).until(
-                EC.staleness_of(spinners[spinner_index])
-            )
-            print("Spinner de resposta"+ str(spinner_index)+"desapareceu")
-            return True
+                # Tenta rolar até o spinner para garantir visibilidade
+                try:
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", spinners[spinner_index])
+                except:
+                    pass
+                
+                # Espera até que desapareça
+                WebDriverWait(self.driver, 5).until(
+                    EC.staleness_of(spinners[spinner_index])
+                )
+                #print("Spinner de resposta"+ str(spinner_index)+"desapareceu")
+                return True
+            else:
+                #print("Spinner de resposta "+ str(spinner_index)+" não encontrado")
+                return True
         except TimeoutException as e:
-            print("Spinner de resposta "+ str(spinner_index)+" demorou demais")
-            print("-ERRO-: "+ str(e))
+            #print("Spinner de resposta "+ str(spinner_index)+" demorou demais")
+            #print("-ERRO-: "+ str(e))
             return None  # Retorna None para tratamento especial
         except NoSuchElementException:
-            print("Nenhum spinner de resposta "+ str(spinner_index)+" encontrado, continuando...")
-            print("-ERRO-: "+ str(e))
+            #print("Nenhum spinner de resposta "+ str(spinner_index)+" encontrado, continuando...")
+            #print("-ERRO-: "+ str(e))
             return True # Retorna True porque ausência de spinner também é válido
         except WebDriverException as e:
-            print(f"Erro interno do WebDriver: {e}")
+            print(f"Erro interno do WebDriver: \n{e}")
             return False
         except Exception as e:
-            print(f"Erro desconhecido: {e}")
+            print(f"Erro inesperado em wait_reply_spinner: \n{e}")
             return False
 
-    def loading_2(self):
+    def loading(self):
         """Função principal de espera de carregamento, com tentativas limitadas"""
         loading_attempts = 0
         max_loading_attempts = 3
 
         while loading_attempts < max_loading_attempts:
             loading_attempts += 1
-            print(f"\nTentativa de carregamento #{loading_attempts}...")
+            #print(f"\nTentativa de carregamento #{loading_attempts}...")
 
             try:
                 doc_ready = self.wait_document_ready()
                 spinner_done = self.wait_spinner()
 
                 if doc_ready and spinner_done:
-                    print("\nCarregamento concluído com sucesso!")
+                    #print("\nCarregamento concluído com sucesso!")
                     return True
                 elif doc_ready and spinner_done is None:
-                    print("\nCarregamento demorou demais, prosseguindo")
+                    #print("\nCarregamento demorou demais, prosseguindo")
                     return None
 
             except Exception as e:
-                print(f"\nErro durante o carregamento: {str(e)}")
+                print(f"\nErro inesperado em loading: \n{e}")
                 return False
 
-            print("\nTentativa de carregamento falhou, tentando novamente...")
+            #print("\nTentativa de carregamento falhou, tentando novamente...")
 
-        print("\nMáximo de tentativas de carregamento atingido. Desistindo.")
+        #print("\nMáximo de tentativas de carregamento atingido. Desistindo.")
         return False
 
     def loading_reply(self, spinner_index):
         loading_attempts = 0
-        max_loading_attempts = 3
+        max_loading_attempts = 2
 
         while loading_attempts < max_loading_attempts:
             loading_attempts += 1
-            print(f"\nTentativa de carregamento #{loading_attempts}...")
+            #print(f"\nTentativa de carregamento de resposta {spinner_index} #{loading_attempts}...")
 
             try:
                 doc_ready = self.wait_document_ready()
                 spinner_done = self.wait_reply_spinner(spinner_index)
 
                 if doc_ready and spinner_done:
-                    print("\nCarregamento concluído com sucesso!")
+                    #print("\nCarregamento de resposta "+ str(spinner_index)+" concluído com sucesso!")
                     return True
                 elif doc_ready and spinner_done is None:
-                    print("\nCarregamento demorou demais, prosseguindo")
+                    #print("\nCarregamento de resposta "+ str(spinner_index)+" demorou demais, prosseguindo")
                     return None
 
             except Exception as e:
-                print(f"\nErro durante o carregamento: {str(e)}")
+                print(f"\nErro durante o carregamento de resposta {spinner_index}: {str(e)}")
                 return False
 
-            print("\nTentativa de carregamento falhou, tentando novamente...")
+            #print("\nTentativa de carregamento de resposta "+ str(spinner_index)+" falhou, tentando novamente...")
 
-        print("\nMáximo de tentativas de carregamento atingido. Desistindo.")
+        #print("\nMáximo de tentativas de carregamento de resposta "+ str(spinner_index)+" atingido. Desistindo.")
         return False
 
     def wait_post_ready(self):
         self.wait.until(EC.presence_of_element_located((
             By.CSS_SELECTOR, 'article div[role = "presentation"]'
         )))
-        
-    def loading(self):
-        #espera o fim do carregamento, se algo estiver carregando
-        try:
-            WebDriverWait(self.driver, 3).until(EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, '[aria-label*="Carregando"][data-visualcompletion="loading-state"][role="progressbar"]')
-            ))        
-            WebDriverWait(self.driver, 90).until(EC.invisibility_of_element_located(
-                (By.CSS_SELECTOR, '[aria-label*="Carregando"][data-visualcompletion="loading-state"][role="progressbar"]')
-            ))
-        except:
-            print("Carregamento não finalizado, esperando 30 segundos")
-            sleep(30)
                 
 
     def login(self, email,senha):
@@ -203,7 +210,7 @@ class WebDriver:
                 By.XPATH, "//div[text()='Entrar']"
             )))
             login_button.click() #clica em entrar
-            while not self.loading_2(): #apenas prossegue quando o carregamento finaliza corretamente(retorna True)
+            while not self.loading(): #apenas prossegue quando o carregamento finaliza corretamente(retorna True)
                 pass
             login_error = self.driver.find_elements(By.XPATH, "//div[contains(text(), 'Sua senha está incorreta')] | //div[contains(text(), 'Houve um problema ao entrar no Instagram')]")
             if login_error:
@@ -222,30 +229,39 @@ class WebDriver:
 
 
     def search_tag(self, tag):
-        #Pesquisa manual(caso url direto não funcione)
+        #Pesquisa manual de tag
+        #volta à página inicial
+        self.driver.get('https://www.instagram.com/')
         self.driver.fullscreen_window()
+        try:
+            search_button = self.wait.until(EC.element_to_be_clickable((
+                By.CSS_SELECTOR, 'a svg[aria-label="Pesquisa"]'
+            )))
+            search_button.click() #clica no botao de pesquisa
 
-        search_button = self.wait.until(EC.element_to_be_clickable((
-            By.CSS_SELECTOR, 'a svg[aria-label="Pesquisa"]'
-        )))
-        search_button.click() #clica no botao de pesquisa
+            search_input = self.wait.until(EC.element_to_be_clickable((
+                By.XPATH, '//input[@aria-label="Entrada da pesquisa" and not(ancestor::main)]'
+            )))
+            search_input.send_keys(tag)
+            self.loading()
 
-        search_input = self.wait.until(EC.element_to_be_clickable((
-            By.CSS_SELECTOR, 'input[aria-label="Entrada da pesquisa"]'
-        )))
-        search_input.send_keys(tag)
-
-        tag = self.wait.until(EC.element_to_be_clickable((
-            By.CSS_SELECTOR, f'a[href="/explore/tags/{tag}/"]'
-        )))
-        tag.click()
-        #só funciona se a tag existir exatamente como digitado
-
+            tag = self.wait.until(EC.element_to_be_clickable((
+                By.XPATH, f'//a[1][following-sibling::a]'
+            )))
+            tag.click()
+            #clica na primeira tag que encontrar
+            return True
+        except TimeoutException:
+            print("Elemento de busca(Lupa) não encontrado")
+            return False
+        except Exception as e:
+            print(f"Erro inesperado em search_tag: \n{e}")
+            return False
 
     def click_on_first_post(self):
         #clica no primeiro post encontrado
         first_post = self.wait.until(EC.element_to_be_clickable((
-            By.CSS_SELECTOR, 'div[style="--x-width: 100%;"] > a'
+            By.CSS_SELECTOR, 'div[style="--x-width: 100%;"] > a, header + div + div a'
         )))
         first_post.click()
         self.wait_post_ready()
@@ -259,13 +275,13 @@ class WebDriver:
                     )))
                     more_comments_button = more_comments_button.find_element(By.XPATH, './ancestor::button[1]')
                     more_comments_button.click()      
-                    if self.loading_2() is None: #Carregamento demorou demais, desiste de tentar abrir mais comentários
+                    if self.loading() is None: #Carregamento demorou demais, desiste de tentar abrir mais comentários
                         return None #retorna None para não tentar abrir comentários ocultos
-                except TimeoutException:
+                except (NoSuchElementException, TimeoutException):
                     print("Não há mais comentários não ocultos")
                     return True
                 except Exception as e:
-                    print(f"Erro inesperado: {e}")
+                    print(f"Erro inesperado em open_more_comments: \n{e}")
                     return False #retorna False para não tentar abrir comentários ocultos
 
 
@@ -279,10 +295,10 @@ class WebDriver:
                     )))
                 try:
                     hidden_comments_button.click() #tenta clicar normalmente
-                    self.loading_2()
+                    self.loading()
                 except:
                     self.driver.execute_script("arguments[0].click();", hidden_comments_button) #clique com JavaScript(se o Selenium não conseguir sozinho)
-                    self.loading_2()
+                    self.loading()
             except:
                 print("Não há comentários ocultos.")
         else:
@@ -291,42 +307,71 @@ class WebDriver:
     #TODO: abrir todas ao mesmo tempo
     def open_replies(self):
         try:
-            see_replies_buttons = self.wait.until(EC.presence_of_all_elements_located((
-                By.XPATH, '//button[span[contains(., "Ver respostas")]]'
-            )))
+            try:
+                see_replies_buttons = self.wait.until(EC.presence_of_all_elements_located((
+                    By.XPATH, '//button[span[contains(., "Ver respostas")]]'
+                )))
+            except TimeoutException:
+                print("Não há respostas para os comentários.")
+                return
+            except Exception as e:
+                print(f"Erro inesperado em open_replies ao coletar botões de ver respostas: \n{e}")
+                return
+
             for button in see_replies_buttons: #clica em todos os botões de ver respostas
                 button.click() 
             
+            spinner_index = 0 
+            #caso o spinner demore muito, é ignorado e apenas os próximos são esperados
             for num_buttons in range(len(see_replies_buttons)): #espera todas as respostas carregarem
+                
                 previous_count = len(self.driver.find_elements(By.CSS_SELECTOR, 'ul li h3 + div > span')) 
                 #número de respostas antes de abrir as respostas
-                spinner_index = 0 
-                #caso o spinner demore muito, é ignorado e apenas os próximos são esperados
-                if self.loading_reply(spinner_index) is True:
-                    self.wait.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, 'ul li h3 + div > span')) > previous_count) 
+                
+                loading_result = self.loading_reply(spinner_index)
+                if loading_result is True:
+                    try:
+                        self.wait.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, 'ul li h3 + div > span')) > previous_count) 
                     #espera até que o número de respostas aumente se o carregamento for bem-sucedido
-                else:    
+                    except:
+                        print("spinner sumiu, mas comentários não apareceram a tempo")
+                        continue
+                elif loading_result is None:    
                     spinner_index += 1 #carregamento não deu certo, esse spinner será ignorado
-                    #TODO: essa função supõe que o spinner nunca irá carregar, se ele carregar, spinners normais podem acabar sendo ignorados 
-        except NoSuchElementException or TimeoutException:
-            print("Não há respostas para os comentários.")
+                else:
+                    #algum erro no carregamento, cessar abertura de respostas
+                    print("erro ao abrir respostas, desistindo dessa atividade")
+                    break
+            
+            #verifica todos os spinners abandonados e espera rapidamente cada um
+            self.loading_reply(-1) 
+
         except Exception as e:
-            print("Erro inesperado: "+ str(e))
+            print(f"Erro inesperado em open_replies: \n{e}")
 
     def have_comments(self): #checa se há ao menos um comentário
         try:
-            self.WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((
+            WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((
                 By.CSS_SELECTOR, 'h3 + div > span'
             )))
+            #print("post tem comentários")
             return True
-        except:
+        except TimeoutException:
+            #print("post sem comentários")
+            return False
+        except Exception as e:
+            print(f"Erro inesperado em have_comments \n{e}")
             return False
 
 
     def open_all_comments(self):
+        print("checando se há comentários")
         if self.have_comments():
+            print("abrindo mais comentários, se houverem")
             if self.open_more_comments() is True:
+                print("abrindo comentários ocultos")
                 self.open_hidden_comments() #só é possível abrir comentários ocultos quando todos os não ocultos forem abertos
+            print("abrindo respostas")
             self.open_replies()    
 
 
@@ -355,9 +400,12 @@ class WebDriver:
             )))
             next_post_button = next_post_button.find_element(By.XPATH, '..') #sobe a hierarquia para encontrar o botão
             next_post_button.click()
-            self.loading_2()
+            self.loading()
             self.wait_post_ready()
             return True
+        except (NoSuchElementException, TimeoutException):
+            print("fim dos posts")
+            return None
         except Exception as e:
-            print("fim dos posts. Erro: "+ str(e))
+            print(f"Erro inesperado em go_to_next_post: \n{e}")
             return False
