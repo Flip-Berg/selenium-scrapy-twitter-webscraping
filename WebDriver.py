@@ -4,15 +4,17 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException, ElementClickInterceptedException
 from lxml import etree
 from time import sleep
+from TagSaver import TagSaver
 
 class WebDriver:
 
     def __init__(self, driver, wait):
         self.driver = driver
         self.wait = wait
+        self.tag_saver = TagSaver()
 
     def go_to_url(self, url):
         self.driver.get(url)
@@ -189,9 +191,12 @@ class WebDriver:
         return False
 
     def wait_post_ready(self):
-        self.wait.until(EC.presence_of_element_located((
-            By.CSS_SELECTOR, 'article div[role = "presentation"]'
-        )))
+        try:
+            self.wait.until(EC.presence_of_element_located((
+                By.CSS_SELECTOR, 'article div[role = "presentation"]'
+            )))
+        except:
+            print("falha no carregamento")
                 
 
     def login(self, email,senha):
@@ -228,8 +233,20 @@ class WebDriver:
         self.wait.until(EC.url_to_be('https://www.instagram.com/')) 
 
 
-    def search_tag(self, tag):
+    def capture_tags(self, tag):
+        try:
+            tags = self.wait.until(EC.presence_of_all_elements_located((
+                By.CSS_SELECTOR, f'a[href^="/"][href$="/"]:not([href^="/p"]):not(footer a):not(span > div > a):not(main a)'
+            )))
+            return tags
+        except TimeoutException:
+            print(f"nenhuma tag {tag} encontrada")
+            return None
+
+
+    def search_tag(self, tag, tag_index=0):
         #Pesquisa manual de tag
+        #vai no primeiro resultado por padrão
         #volta à página inicial
         self.driver.get('https://www.instagram.com/')
         self.driver.fullscreen_window()
@@ -244,12 +261,26 @@ class WebDriver:
             )))
             search_input.send_keys(tag)
             self.loading()
+            tag_elements = self.capture_tags(tag)
 
-            tag = self.wait.until(EC.element_to_be_clickable((
-                By.XPATH, f'//a[1][following-sibling::a]'
-            )))
-            tag.click()
-            #clica na primeira tag que encontrar
+            if tag_elements is None:
+                print(f"nenhuma tag {tag} encontrada")
+                return None
+            
+            num_tags = len(tag_elements)
+
+            if tag_index >= num_tags:
+                print(f"não há °{tag_index+1} tag em {tag}")
+                return None
+    
+            tag_element = tag_elements[tag_index]
+            if self.tag_saver.is_tag_saved(tag_element):
+                print(f"Tag {tag_element.text} já foi raspada.")
+                return None
+            #espera estar clicavel
+            self.wait.until(EC.element_to_be_clickable(tag_element))
+            tag_element.click() #clica na tag
+            self.tag_saver.save_tag(tag_element)
             return True
         except TimeoutException:
             print("Elemento de busca(Lupa) não encontrado")
@@ -258,22 +289,41 @@ class WebDriver:
             print(f"Erro inesperado em search_tag: \n{e}")
             return False
 
+
+    
+
     def click_on_first_post(self):
         #clica no primeiro post encontrado
-        first_post = self.wait.until(EC.element_to_be_clickable((
-            By.CSS_SELECTOR, 'div[style="--x-width: 100%;"] > a, header + div + div a'
-        )))
-        first_post.click()
-        self.wait_post_ready()
-        
+        try:
+            first_post = self.wait.until(EC.element_to_be_clickable((
+                By.CSS_SELECTOR, 'div[style="--x-width: 100%;"] > a, header + div + div a'
+            )))
+            first_post.click()
+        except ElementClickInterceptedException:
+            # Tenta fechar modal genérico se estiver visível
+            try:
+                modal = self.driver.find_element(By.CSS_SELECTOR, 'div.generic_dialog.pop_dialog.generic_dialog_modal')
+                close_btn = modal.find_elements(By.CSS_SELECTOR, 'button, [role="button"], .x1i10hfl')
+                for btn in close_btn:
+                    try:
+                        btn.click()
+                        break
+                    except:
+                        continue
+                # Aguarda o modal sumir
+                WebDriverWait(self.driver, 5).until(EC.staleness_of(modal))
+            except Exception:
+                pass
+            # Tenta novamente
+            self.click_on_first_post()
 
     def open_more_comments(self):
         while True:
                 try:
                     more_comments_button = self.wait.until(EC.presence_of_element_located((
-                        By.CSS_SELECTOR, '[aria-label = "Carregar mais comentários"]'
+                        By.XPATH, '//button[.//*[name()="svg"][@aria-label="Carregar mais comentários"]]'
                     )))
-                    more_comments_button = more_comments_button.find_element(By.XPATH, './ancestor::button[1]')
+                    #more_comments_button = more_comments_button.find_element(By.XPATH, './ancestor::button[1]')
                     more_comments_button.click()      
                     if self.loading() is None: #Carregamento demorou demais, desiste de tentar abrir mais comentários
                         return None #retorna None para não tentar abrir comentários ocultos
@@ -304,7 +354,7 @@ class WebDriver:
         else:
             print("Não há comentários ocultos.")
 
-    #TODO: abrir todas ao mesmo tempo
+
     def open_replies(self):
         try:
             try:
@@ -354,10 +404,10 @@ class WebDriver:
             WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((
                 By.CSS_SELECTOR, 'h3 + div > span'
             )))
-            #print("post tem comentários")
+            print("post tem comentários")
             return True
         except TimeoutException:
-            #print("post sem comentários")
+            print("post sem comentários")
             return False
         except Exception as e:
             print(f"Erro inesperado em have_comments \n{e}")
@@ -365,20 +415,22 @@ class WebDriver:
 
 
     def open_all_comments(self):
+        print("esperando post carregar")
+        self.wait_post_ready()
         print("checando se há comentários")
         if self.have_comments():
             print("abrindo mais comentários, se houverem")
             if self.open_more_comments() is True:
                 print("abrindo comentários ocultos")
                 self.open_hidden_comments() #só é possível abrir comentários ocultos quando todos os não ocultos forem abertos
-            print("abrindo respostas")
-            self.open_replies()    
+            print("abrindo respostas, se houverem")
+            self.open_replies()
 
 
     def get_post_html(self):
         #pega o html da parte textual do post
         post_html = self.wait.until(EC.presence_of_element_located((
-            By.CSS_SELECTOR, 'div[role = "presentation"]'
+            By.CSS_SELECTOR, 'article div[role = "presentation"]:has(*)'
         )))
         post_html = post_html.get_attribute('outerHTML')
         return post_html
@@ -396,9 +448,9 @@ class WebDriver:
     def go_to_next_post(self):
         try:
             next_post_button = self.wait.until(EC.element_to_be_clickable((
-                By.CSS_SELECTOR, 'svg[aria-label="Avançar"]' #encontra o filho do botão
+                By.XPATH, '//button[.//*[name()="svg"][@aria-label="Avançar"]]' #encontra o filho do botão
             )))
-            next_post_button = next_post_button.find_element(By.XPATH, '..') #sobe a hierarquia para encontrar o botão
+            #next_post_button = next_post_button.find_element(By.XPATH, '..') #sobe a hierarquia para encontrar o botão
             next_post_button.click()
             self.loading()
             self.wait_post_ready()

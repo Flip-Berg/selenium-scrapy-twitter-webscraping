@@ -46,5 +46,7 @@ class Scraper:
             "comentarios": comments if comments else ""
         }
         if post_data["descricao"] == "" and post_data["comentarios"] == "":
+            print("Post vazio, não será salvo.")
             return #post vazio, não é salvo.
         JsonManager.save_on_json(tag, post_data)
+        print("Post salvo com sucesso.")
