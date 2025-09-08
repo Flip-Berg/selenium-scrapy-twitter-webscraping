@@ -64,3 +64,22 @@ class JsonManager:
                     if saved_post["descricao"] == post_description:
                         return True
         return False
+    
+    #pega todos os jsons e junta em um só
+    def merge_jsons(self, tags, output_filename="merged_posts_data.json"):
+        merged_data = []
+        for tag in tags:
+            json_filename = self.get_json_path(tag)
+            if os.path.exists(json_filename):
+                with open(json_filename, "r", encoding="utf-8") as f:
+                    try:
+                        all_data = json.load(f)
+                        merged_data.extend({"tag": tag, "posts": all_data})
+                    except json.JSONDecodeError:
+                        print(f"Erro ao ler o arquivo {json_filename}, pulando.")
+                    except Exception as e:
+                        print(f"Erro inesperado ao ler o arquivo {json_filename}: {e}, pulando.")
+        
+        with open(output_filename, "w", encoding="utf-8") as f:
+            json.dump(merged_data, f, ensure_ascii=False, indent=4)
+        print(f"Todos os posts mesclados salvos em {output_filename}.")

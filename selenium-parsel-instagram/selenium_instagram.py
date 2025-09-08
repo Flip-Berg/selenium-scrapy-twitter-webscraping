@@ -9,9 +9,9 @@ def main():
     hashtags = ['#uece', '#uecevest'] + [f'#uece{year}' for year in range(2000, 2027)]
     accounts = ['@uece', '@uecedadepressao', '@uecealunos']
     #searches = ['uece']
-    tag_inputs = []
-    tag_inputs.append(hashtags)
-    tag_inputs.append(accounts)
+    tag_inputs = ["#hollowknight"]
+    #tag_inputs.append(hashtags)
+    #tag_inputs.append(accounts)
     #tag_inputs.append(searches)
     #tags para raspar
     num_posts = 2
@@ -33,5 +33,7 @@ def main():
                 instagram_text_scraper.scrape_posts_text(num_posts, tag)
                 print(instagram_text_scraper.web_driver.tag_saver.get_saved_tags())
 
+    tags = instagram_text_scraper.get_saved_tags()
+    instagram_text_scraper.merge_posts(tags)
 
 main()

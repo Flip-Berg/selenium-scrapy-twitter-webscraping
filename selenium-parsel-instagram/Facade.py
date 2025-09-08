@@ -82,6 +82,12 @@ class Facade:
         print(f"foram raspados {post+1} posts")
 
 
+    def get_saved_tags(self):
+        return self.web_driver.tag_saver.get_saved_tags()
+
+    def merge_posts(self, tags, output_filename="merged_posts_data.json"):
+        self.json_manager.merge_jsons(tags, output_filename)
+
     def traverse_posts(self):
         while self.web_driver.go_to_next_post():
             pass
