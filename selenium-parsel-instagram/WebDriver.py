@@ -1,12 +1,8 @@
-from asyncio.windows_events import NULL
-from configparser import NoSectionError
-from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException, ElementClickInterceptedException
 from lxml import etree
-from time import sleep
 from TagSaver import TagSaver
 
 class WebDriver:
@@ -244,6 +240,15 @@ class WebDriver:
             return None
 
 
+    def get_tag_text(self, tag_element):
+        try:
+            tag_element_text = WebDriverWait(tag_element, 2).until(
+                lambda el: el.find_element(By.XPATH, './/span')
+            )
+            return tag_element_text.text if tag_element_text else None
+        except Exception:
+            return None
+
     def search_tag(self, tag, tag_index=0):
         #Pesquisa manual de tag
         #vai no primeiro resultado por padrão
@@ -261,27 +266,32 @@ class WebDriver:
             )))
             search_input.send_keys(tag)
             self.loading()
+
+            #todas as tags encontradas com o input
             tag_elements = self.capture_tags(tag)
 
-            if tag_elements is None:
+            if tag_elements is None or len(tag_elements) == 0:
                 print(f"nenhuma tag {tag} encontrada")
-                return None
+                return False
             
             num_tags = len(tag_elements)
 
             if tag_index >= num_tags:
                 print(f"não há °{tag_index+1} tag em {tag}")
-                return None
-    
+                return False
+
             tag_element = tag_elements[tag_index]
-            if self.tag_saver.is_tag_saved(tag_element):
-                print(f"Tag {tag_element.text} já foi raspada.")
-                return None
+            tag_text = self.get_tag_text(tag_element)
+            if self.tag_saver.is_tag_saved(tag_text):
+                print(f"Tag {tag_text} já foi raspada.")
+                return "Already saved"
+            
             #espera estar clicavel
             self.wait.until(EC.element_to_be_clickable(tag_element))
-            tag_element.click() #clica na tag
-            self.tag_saver.save_tag(tag_element)
-            return True
+            tag_element.click() 
+            self.tag_saver.save_tag(tag_text) #salva a tag para garantir que não será raspada novamente
+            print(f"Tag {tag_text} selecionada para raspagem.")
+            return True, tag_text
         except TimeoutException:
             print("Elemento de busca(Lupa) não encontrado")
             return False
@@ -427,14 +437,32 @@ class WebDriver:
             self.open_replies()
 
 
+    def get_post_description(self):
+        try:
+            post_description = self.wait.until(EC.presence_of_element_located((
+                By.CSS_SELECTOR, 'article [role="presentation"] h1'
+            )))
+            post_description = post_description.text if post_description else ""
+            return post_description
+        except TimeoutException:
+            #print("Post sem descrição")
+            return ""
+        except Exception as e:
+            print(f"Erro inesperado em get_post_description: \n{e}")
+            return ""
+
+
     def get_post_html(self):
         #pega o html da parte textual do post
-        post_html = self.wait.until(EC.presence_of_element_located((
-            By.CSS_SELECTOR, 'article div[role = "presentation"]:has(*)'
-        )))
-        post_html = post_html.get_attribute('outerHTML')
-        return post_html
-
+        try:
+            post_html = self.wait.until(EC.presence_of_element_located((
+                By.CSS_SELECTOR, 'article div[role = "presentation"]:has(section)'
+            )))
+            post_html = post_html.get_attribute('outerHTML')
+            return post_html
+        except Exception as e:
+            print(f"Erro inesperado em get_post_html: \n{e}")
+            return False
 
     def save_post_html(post_html):
         # Parsing do HTML

@@ -19,7 +19,7 @@ class Scraper:
         post_selector = Selector(text=post_html)
 
         post_description = post_selector.xpath('string(.//h1)').get() #[role="presentation"] div > h1::text
-
+        #print(post_description)
         comment_blocks = post_selector.css(':not(li) > ul')[1:] 
 
         comments = []
@@ -49,4 +49,3 @@ class Scraper:
             print("Post vazio, não será salvo.")
             return #post vazio, não é salvo.
         JsonManager.save_on_json(tag, post_data)
-        print("Post salvo com sucesso.")

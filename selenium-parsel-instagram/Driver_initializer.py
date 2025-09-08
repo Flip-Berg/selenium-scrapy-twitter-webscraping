@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.options import Options
 
 class Driver_initializer:
 
-    def config_driver():
+    def config_chrome_driver():
         #configurações do driver(pra não aparecer avisos no terminal)
         options = Options()
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -16,6 +16,12 @@ class Driver_initializer:
         # ou log_path="/dev/null" no Linux/macOS
 
         driver = webdriver.Chrome(service=service, options=options)
+        return driver
+    
+    def config_firefox_driver(headless=False):
+        options = Options()
+        options.headless = headless
+        driver = webdriver.Firefox(options=options)
         return driver
     
     def config_wait(driver, max_time):

@@ -14,7 +14,7 @@ class Facade:
     def login(self, url):
         self.web_driver.go_to_url(url)
         self.web_driver.driver.fullscreen_window()
-        self.json_manager.delete_previous_jsons(self.tags)
+        #self.json_manager.delete_previous_jsons(self.tags)
         credentials = self.scraper.get_credentials()
         self.web_driver.login(*credentials)
         self.web_driver.not_now()
@@ -22,15 +22,22 @@ class Facade:
     
     def go_to_posts_by_tag(self, tag, tag_index =0):
         search_result = self.web_driver.search_tag(tag, tag_index)
+        if search_result == "Already saved":
+            return "Already saved"
         if search_result is None:
             return None
         if search_result is False:
-            print(f"Erro ao buscar tag {tag}, prosseguindo")
+            print(f"Erro ao buscar tag input {tag}, prosseguindo")
             return False
+        tag_text = search_result[1]
         while self.web_driver.loading() is not True: #espera até que a página carregue
             self.web_driver.driver.refresh()
             pass
         self.web_driver.click_on_first_post()
+        return tag_text
+    
+    def get_current_tag(self):
+        return self.web_driver.tag_saver.get_current_tag()
 
     def go_to_posts_direct_link(self):
         #tag #uece
@@ -41,10 +48,15 @@ class Facade:
         self.web_driver.driver.fullscreen_window()
 
     def scrape_post_text(self, tag):
-        
+        post_description = self.web_driver.get_post_description()
+        post_saved = self.json_manager.check_if_post_is_saved(tag, post_description, self.web_driver.tag_saver)
+        if post_saved: 
+            print("Post já foi salvo anteriormente, pulando para o próximo post.")
+            return True
         self.web_driver.open_all_comments()
         post_html = self.web_driver.get_post_html()
-        self.scraper.scrape_post_text(post_html, tag, self.json_manager)
+        if post_html:
+            self.scraper.scrape_post_text(post_html, tag, self.json_manager)
         have_next_post = self.web_driver.go_to_next_post()
         if have_next_post is None:
             #fim dos posts
