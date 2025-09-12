@@ -33,13 +33,12 @@ class WebDriver:
             print(f"Erro inesperado em wait_document_ready: \n{e}")
             return False
 
-    def wait_spinner(self):
+    def wait_spinner(self, spinner_selector='article [data-visualcompletion="loading-state"], article [role="progressbar"]'):
         """Espera o spinner desaparecer, se existir"""
         #print("encontrando spinner")
         try:
             # Primeiro verifica se o spinner está presente (timeout curto)
             try:
-                spinner_selector = 'article [data-visualcompletion="loading-state"], article [role="progressbar"]'
                 spinner = WebDriverWait(self.driver, 3).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, spinner_selector))
                 )
@@ -128,8 +127,22 @@ class WebDriver:
         except Exception as e:
             print(f"Erro inesperado em wait_reply_spinner: \n{e}")
             return False
+          
 
-    def loading(self):
+    def is_spinner_present(self, spinner_selector='article [data-visualcompletion="loading-state"], article [role="progressbar"]'):
+        """Retorna o elemento spinner se presente, ou None"""
+        try:
+            WebDriverWait(self.driver, 1, 0.2).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, spinner_selector))
+            )
+            return True 
+        except TimeoutException:
+            return None
+        except Exception as e:
+            print(f"Erro inesperado em get_spinner: \n{e}")
+            return False
+
+    def loading(self, spinner_selector='article [data-visualcompletion="loading-state"], article [role="progressbar"]'):
         """Função principal de espera de carregamento, com tentativas limitadas"""
         loading_attempts = 0
         max_loading_attempts = 3
@@ -140,7 +153,7 @@ class WebDriver:
 
             try:
                 doc_ready = self.wait_document_ready()
-                spinner_done = self.wait_spinner()
+                spinner_done = self.wait_spinner(spinner_selector)
 
                 if doc_ready and spinner_done:
                     #print("\nCarregamento concluído com sucesso!")
@@ -300,7 +313,22 @@ class WebDriver:
             return False
 
 
+    def scroll_to_bottom(self):
+        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     
+    
+    def scroll_to_top(self):
+        self.driver.execute_script("window.scrollTo(0, 0);")
+
+
+    def load_all_posts(self):
+        spinner_selector = 'body section main [role="progressbar"], body section main [data-visualcompletion="loading-state"]'
+        #scroll até o final da página
+        while self.is_spinner_present(spinner_selector):
+            self.scroll_to_bottom()
+            self.loading(spinner_selector)
+
+        self.scroll_to_top()
 
     def click_on_first_post(self):
         #clica no primeiro post encontrado
@@ -489,3 +517,5 @@ class WebDriver:
         except Exception as e:
             print(f"Erro inesperado em go_to_next_post: \n{e}")
             return False
+
+

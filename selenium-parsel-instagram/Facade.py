@@ -19,6 +19,7 @@ class Facade:
         self.web_driver.login(*credentials)
         self.web_driver.not_now()
 
+
     
     def go_to_posts_by_tag(self, tag, tag_index =0):
         search_result = self.web_driver.search_tag(tag, tag_index)
@@ -33,19 +34,28 @@ class Facade:
         while self.web_driver.loading() is not True: #espera até que a página carregue
             self.web_driver.driver.refresh()
             pass
+        self.web_driver.load_all_posts()
         self.web_driver.click_on_first_post()
         return tag_text
+
     
     def get_current_tag(self):
         return self.web_driver.tag_saver.get_current_tag()
+
+
+
 
     def go_to_posts_direct_link(self):
         #tag #uece
         self.web_driver.driver.get('https://www.instagram.com/explore/search/keyword/?q=%23uece')
         while not self.web_driver.loading(): #espera até que a página carregue
             pass
+        self.web_driver.load_all_posts()
         self.web_driver.click_on_first_post()
         self.web_driver.driver.fullscreen_window()
+
+
+
 
     def scrape_post_text(self, tag):
         post_description = self.web_driver.get_post_description()

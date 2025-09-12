@@ -1,7 +1,9 @@
 from Facade import Facade
 from Driver_initializer import Driver_initializer
+from FileLogger import FileLogger
 
 def main():
+    logger = FileLogger("log.txt")
     driver = Driver_initializer.config_chrome_driver() 
     #driver que permite que o Selenium tome açoes
     wait = Driver_initializer.config_wait(driver, 15) 
@@ -9,12 +11,12 @@ def main():
     hashtags = ['#uece', '#uecevest'] + [f'#uece{year}' for year in range(2000, 2027)]
     accounts = ['@uece', '@uecedadepressao', '@uecealunos']
     #searches = ['uece']
-    tag_inputs = ["#hollowknight"]
-    #tag_inputs.append(hashtags)
-    #tag_inputs.append(accounts)
+    tag_inputs = []
+    tag_inputs.append(hashtags)
+    tag_inputs.append(accounts)
     #tag_inputs.append(searches)
     #tags para raspar
-    num_posts = 2
+    num_posts = 5000
     #numero desejado de posts de cada tag a serem extraidos
     url = 'https://www.instagram.com/' 
     #url para login
@@ -35,5 +37,9 @@ def main():
 
     tags = instagram_text_scraper.get_saved_tags()
     instagram_text_scraper.merge_posts(tags)
+    logger.close()
+    driver.quit()
 
 main()
+
+#a partir do ~=276 post, começa a se repetir
