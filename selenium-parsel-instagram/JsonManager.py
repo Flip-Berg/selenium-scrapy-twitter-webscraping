@@ -5,6 +5,7 @@ import os
 class JsonManager:
 
     def __init__(self):
+        # Caminho relativo ao diretório pai (onde estão os arquivos JSON)
         self.data_dir = "all_posts_data"
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
@@ -24,6 +25,9 @@ class JsonManager:
             self.delete_previous_json(tag)
 
     def save_on_json(self, tag, post_data):
+        #se tag nao comecar com #, é conta, então adiciona o @
+        if not tag.startswith("#") and not tag.startswith("@"):
+            tag = "@" + tag
         json_filename = self.get_json_path(tag)
         if os.path.exists(json_filename):
             with open(json_filename, "r", encoding="utf-8") as f:
@@ -36,16 +40,11 @@ class JsonManager:
 
         # adiciona o novo post se já não estiver presente
         for saved in all_data:
-            if post_data["descricao"] not in saved["descricao"]:
-                all_data.append(post_data)
-            else:
+            if self.normalize_text(saved["descricao"]) == self.normalize_text(post_data["descricao"]):
                 print("Post já existe no arquivo, não será salvo novamente.")
-                print(saved["descricao"])
-                print(post_data["descricao"])
-                print("repr do salvo:", repr(saved["descricao"]))
-                print("repr do novo:", repr(post_data["descricao"]))
-                print("iguais?", self.normalize_text(saved["descricao"]) == self.normalize_text(post_data["descricao"]))
                 return
+
+        all_data.append(post_data)
 
         # salva de volta
         with open(json_filename, "w", encoding="utf-8") as f:
@@ -63,13 +62,7 @@ class JsonManager:
 
 
     def normalize_text(self, text):
-        import unicodedata
-        if not isinstance(text, str):
-            return ""
-        # Remove espaços extras, normaliza unicode e quebra de linha
-        text = text.strip().replace('\r\n', '\n').replace('\r', '\n')
-        text = unicodedata.normalize('NFC', text)
-        return text
+        return text.replace(" ", "").replace("\n", "").replace("\\n", "")
 
     def check_if_post_is_saved(self, tag, post_description, return_post=False):
         for tag in self.check_all_tags_with_json():  # checa se o post já existe em qualquer json já feito
@@ -86,7 +79,7 @@ class JsonManager:
                             f"Erro inesperado ao ler o arquivo {json_filename}: {e}")
                         return False
                 for saved_post in all_data:
-                    if repr(self.normalize_text(saved_post["descricao"])) == repr(self.normalize_text(post_description)):
+                    if self.normalize_text(saved_post["descricao"]) == self.normalize_text(post_description):
                         """print("repr do salvo:", repr(saved_post["descricao"]))
                         print("repr do novo:", repr(post_description))
                         print("iguais?", self.normalize_text(saved_post["descricao"]) == self.normalize_text(post_description))
@@ -114,7 +107,7 @@ class JsonManager:
                             f"Erro inesperado ao ler o arquivo {json_filename}: {e}")
                         return
                 for i, saved_post in enumerate(all_data):
-                    if saved_post["descricao"] == old_post_data["descricao"]:
+                    if self.normalize_text(saved_post["descricao"]) == self.normalize_text(old_post_data["descricao"]):
                         all_data[i] = new_post_data
                         with open(json_filename, "w", encoding="utf-8") as f:
                             json.dump(
@@ -125,15 +118,16 @@ class JsonManager:
 
     # pega todos os jsons e junta em um só
 
-    def merge_jsons(self, tags, output_filename="merged_posts_data.json"):
+    def merge_jsons(self, output_title="merged"):
+        output_filename = self.get_json_path(output_title)
         merged_data = []
-        for tag in tags:
+        for tag in self.check_all_tags_with_json():
             json_filename = self.get_json_path(tag)
             if os.path.exists(json_filename):
                 with open(json_filename, "r", encoding="utf-8") as f:
                     try:
                         all_data = json.load(f)
-                        merged_data.extend({"tag": tag, "posts": all_data})
+                        merged_data.append({"tag": tag, "posts": all_data})
                     except json.JSONDecodeError:
                         print(
                             f"Erro ao ler o arquivo {json_filename}, pulando.")

@@ -50,7 +50,6 @@ class Facade:
 
     def scrape_post_text(self, tag):
         post_description = self.web_driver.get_post_description()
-        post_description = post_description.replace("\n", "").replace("\\n", "").replace(" ","")
         #print("Descrição do post(facade):")
         #print(repr(post_description))
         saved_post = self.json_manager.check_if_post_is_saved(
@@ -58,7 +57,7 @@ class Facade:
         if saved_post:
             print(
                 "Post já salvo anteriormente, escaneando para checar se há mais comentários que antes")
-            print(saved_post)
+            #print(saved_post)
         self.web_driver.open_all_comments()
         post_html = self.web_driver.get_post_html()
         if post_html:
@@ -92,9 +91,13 @@ class Facade:
     def get_saved_tags(self):
         return self.web_driver.tag_saver.get_saved_tags()
 
-    def merge_posts(self, tags, output_filename="merged_posts_data.json"):
-        self.json_manager.merge_jsons(tags, output_filename)
+    def merge_posts(self, output_filename="merged_posts_data.json"):
+        self.json_manager.merge_jsons(output_filename)
 
     def traverse_posts(self):
         while self.web_driver.go_to_next_post():
             pass
+
+
+    def normalize_jsons(self):
+        self.json_manager.normalize_jsons()

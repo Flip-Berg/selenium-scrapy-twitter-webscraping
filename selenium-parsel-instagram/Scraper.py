@@ -20,9 +20,9 @@ class Scraper:
 
         # [role="presentation"] div > h1::text
         post_description = post_selector.xpath('string(.//h1)').get()
-        post_description = post_description.replace("\n", "").replace("\\n", "").replace(" ","")
-        print("Descrição do post(scraper):")
-        print(repr(post_description))
+        # Mantém espaços e apenas limpa quebras de linha excessivas
+        #print("Descrição do post(scraper):")
+        #print(repr(post_description))
         comment_blocks = post_selector.css(':not(li) > ul')[1:]
 
         comments = []
@@ -49,7 +49,7 @@ class Scraper:
 
         post_data = {
             "descricao": post_description if post_description else "",
-            "comentarios": comments if comments else ""
+            "comentarios": comments if comments else []
         }
         if post_data["descricao"] == "" and post_data["comentarios"] == "":
             print("Post vazio, não será salvo.")
