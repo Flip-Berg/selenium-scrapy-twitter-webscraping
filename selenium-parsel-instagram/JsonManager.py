@@ -87,12 +87,12 @@ class JsonManager:
                         return False
                 for saved_post in all_data:
                     if repr(self.normalize_text(saved_post["descricao"])) == repr(self.normalize_text(post_description)):
-                        print("repr do salvo:", repr(saved_post["descricao"]))
+                        """print("repr do salvo:", repr(saved_post["descricao"]))
                         print("repr do novo:", repr(post_description))
                         print("iguais?", self.normalize_text(saved_post["descricao"]) == self.normalize_text(post_description))
                         print("Post já existe em um json")
                         print(saved_post["descricao"])
-                        print(post_description)
+                        print(post_description)"""
                         if return_post:
                             return saved_post
                         return True

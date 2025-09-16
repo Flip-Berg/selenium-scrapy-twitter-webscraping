@@ -50,9 +50,9 @@ class Facade:
 
     def scrape_post_text(self, tag):
         post_description = self.web_driver.get_post_description()
-        post_description.replace('\n', '')
-        print("Descrição do post(facade):")
-        print(repr(post_description))
+        post_description = post_description.replace("\n", "").replace("\\n", "").replace(" ","")
+        #print("Descrição do post(facade):")
+        #print(repr(post_description))
         saved_post = self.json_manager.check_if_post_is_saved(
             tag, post_description, True)
         if saved_post:

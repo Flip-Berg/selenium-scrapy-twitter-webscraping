@@ -20,6 +20,7 @@ class Scraper:
 
         # [role="presentation"] div > h1::text
         post_description = post_selector.xpath('string(.//h1)').get()
+        post_description = post_description.replace("\n", "").replace("\\n", "").replace(" ","")
         print("Descrição do post(scraper):")
         print(repr(post_description))
         comment_blocks = post_selector.css(':not(li) > ul')[1:]
