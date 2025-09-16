@@ -9,6 +9,9 @@ class FileLogger:
     def write(self, message):
         self.terminal.write(message)
         self.log.write(message)
+        self.log.flush()  # Salva imediatamente no arquivo
+        # Opcional: também pode forçar flush do terminal
+        self.terminal.flush()
 
     def flush(self):
         self.terminal.flush()
