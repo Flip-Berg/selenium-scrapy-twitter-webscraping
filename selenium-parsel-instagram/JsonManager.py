@@ -26,8 +26,12 @@ class JsonManager:
 
     def save_on_json(self, tag, post_data):
         #se tag nao comecar com #, é conta, então adiciona o @
-        if not tag.startswith("#") and not tag.startswith("@"):
-            tag = "@" + tag
+        try:
+            if not tag.startswith("#") and not tag.startswith("@"):
+                tag = "@" + tag
+        except Exception as e:
+            print(f"Erro ao processar a tag {tag}: {e}")
+            return False
         json_filename = self.get_json_path(tag)
         if os.path.exists(json_filename):
             with open(json_filename, "r", encoding="utf-8") as f:

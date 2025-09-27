@@ -13,6 +13,7 @@ class WebDriver:
         self.wait = wait
         self.tag_saver = TagSaver()
 
+
     def go_to_url(self, url):
         self.driver.get(url)
 
@@ -147,6 +148,56 @@ class WebDriver:
         except Exception as e:
             print(f"Erro inesperado em get_spinner: \n{e}")
             return False
+        
+
+    def is_spinner_visible(self, spinner_selector='article [data-visualcompletion="loading-state"], article [role="progressbar"]'):
+        """Retorna True se o spinner estiver visível, False se não estiver, ou None se não existir"""
+        try:
+            spinner = WebDriverWait(self.driver, 1, 0.1).until(
+                EC.visibility_of_element_located(
+                    (By.CSS_SELECTOR, spinner_selector))
+            )
+            try:
+                is_in_viewport = self.driver.execute_script('''
+                    var elem = arguments[0];
+                    if (!elem) return false;
+                    var rect = elem.getBoundingClientRect();
+                    return (
+                        rect.top >= 0 &&
+                        rect.left >= 0 &&
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                    );
+                ''', spinner)
+                return is_in_viewport
+            except Exception:
+                return False
+        except TimeoutException:
+            return None
+        except Exception as e:
+            print(f"Erro inesperado em is_spinner_visible: \n{e}")
+            return False
+        
+        
+    def is_spinner_in_viewport(self, spinner_selector='article [data-visualcompletion="loading-state"], article [role="progressbar"]'):
+        """Verifica se o spinner está presente e dentro do viewport do usuário."""
+        try:
+            spinner = self.driver.find_element(By.CSS_SELECTOR, spinner_selector)
+            is_in_viewport = self.driver.execute_script('''
+                var elem = arguments[0];
+                if (!elem) return false;
+                var rect = elem.getBoundingClientRect();
+                return (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                );
+            ''', spinner)
+            return is_in_viewport
+        except Exception:
+            return False
+
 
     def loading(self, spinner_selector='article [data-visualcompletion="loading-state"], article [role="progressbar"]'):
         """Função principal de espera de carregamento, com tentativas limitadas"""
@@ -326,15 +377,19 @@ class WebDriver:
         self.driver.execute_script("window.scrollTo(0, 0);")
 
     def load_all_posts(self):
+        # número máximo de tentativas de carregamento
+        max_attempts = 50
         spinner_selector = 'body section main [role="progressbar"], body section main [data-visualcompletion="loading-state"]'
-        self.scroll_to_bottom()
-        # scroll até o final da página
-        if self.is_spinner_present(spinner_selector):
-            self.loading(spinner_selector)
-            self.load_all_posts()  # se o spinner estiver presente, continua rolando até o final
-        else:
-            self.scroll_to_top()
-            print("todos os posts carregados")
+        attempts = 0
+        while attempts < max_attempts:
+            self.scroll_to_bottom()
+            if self.is_spinner_present(spinner_selector):
+                self.loading(spinner_selector)
+                attempts += 1
+            else:
+                break
+        self.scroll_to_top()
+        print("todos os posts carregados")
 
     def click_on_first_post(self):
         # clica no primeiro post encontrado
@@ -529,4 +584,149 @@ class WebDriver:
             return None
         except Exception as e:
             print(f"Erro inesperado em go_to_next_post: \n{e}")
+            return False
+        
+    
+    def go_to_nth_post(self, n):
+        print("indo ao post nº "+ str(n+1))
+        self.scroll_to_top()
+        self.click_on_first_post()
+        for _ in range(n):
+            if self.go_to_next_post() is not True:
+                print(f"não foi possível ir ao post nº {n+1}, parando aqui")
+                return False
+
+
+    def load_next_posts(self):
+        # número máximo de tentativas de carregamento
+
+        spinner_selector = 'body section main [role="progressbar"], body section main [data-visualcompletion="loading-state"]'
+
+        self.scroll_to_bottom()
+        if self.is_spinner_present(spinner_selector):
+            self.loading(spinner_selector)
+        self.scroll_to_top()
+        print("posts carregados")
+
+    
+    def close_post(self):
+        try:
+            close_button = self.wait.until(EC.element_to_be_clickable((
+                By.XPATH, '//*[name()="svg"][@aria-label="Fechar" or @aria-label="Close"]/ancestor::div[3]'
+            )))
+            close_button.click()
+            self.loading()
+        except Exception as e:
+            print(f"Erro inesperado em close_post: \n{e}")
+
+    
+    def focus_first_post(self):
+        try:
+            first_post = self.wait.until(EC.presence_of_element_located((
+                By.CSS_SELECTOR, 'div[style="--x-width: 100%;"] > a, header + div + div a'
+            )))
+            first_post_href = first_post.get_attribute('href')
+            print("focando no primeiro post: "+ first_post_href)
+            first_post_href = first_post_href.replace("https://www.instagram.com", "")
+            return first_post_href
+        except Exception as e:
+            print(f"Erro inesperado em focus_first_post: \n{e}")
+            return False
+        
+    def focus_on_next_post(self, current_post_href, tag):
+        try:
+            # Verifica se current_post_href é válido
+            if not current_post_href:
+                print(f"post atual é None ou vazio, encerrando raspagem da tag")
+                return None
+                
+            current_post = self.driver.execute_script("""
+                const href = arguments[0];
+                return [...document.querySelectorAll('a')]
+                    .find(el => el.getAttribute('href') === href);
+            """, current_post_href)
+            
+            # Verifica se current_post foi encontrado
+            if not current_post:
+                print("post atual não foi encontrado no DOM, encerrando raspagem da tag")
+                return None
+                
+            # Verifica se tag é válido antes de usar startswith
+            try:
+                if tag and tag.startswith("#"):
+                    current_post = current_post.find_element(By.XPATH, './ancestor::div[2]')
+                else:
+                    current_post = current_post.find_element(By.XPATH, './ancestor::div[1]')
+            except Exception as e:
+                print(f"Erro ao ajustar current_post com base na tag: \n{e}")
+                return None
+            #verificar se os posts ao lado são vazios(fim da grade)
+            next_sibling_div = current_post.find_elements(By.XPATH, 'following-sibling::div[1]')
+            if next_sibling_div and len(next_sibling_div[0].find_elements(By.XPATH, './/*')) == 0:
+                print("próximo post está vazio, fim da grade")
+                return None
+            try:
+                next_post = current_post.find_element(
+                    By.XPATH, 'following-sibling::div[1]//a')
+            except NoSuchElementException:
+                #carretel de 3 posts acabou, vai pro próximo carretel
+                try:
+                    next_post = current_post.find_element(
+                        By.XPATH, 'ancestor::div[1]/following-sibling::div[1]//a')
+                except NoSuchElementException:
+                    print("não há próximo post visível na tela")
+                    return None
+            next_post_href = next_post.get_attribute('href')
+            print("focando no próximo post: "+ next_post_href)
+            next_post_href = next_post_href.replace("https://www.instagram.com", "")
+            #scrolla até o próximo post
+            if self.is_spinner_visible('body section main [role="progressbar"], body section main [data-visualcompletion="loading-state"]'):
+                print("spinner visível, esperando carregar")
+                self.loading('body section main [role="progressbar"], body section main [data-visualcompletion="loading-state"]')
+            self.driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});", next_post)
+            return next_post_href
+        except NoSuchElementException:
+            print("não há próximo post visível na tela")
+            return None
+        except Exception as e:
+            print(f"Erro inesperado em focus_on_next_post: \n{e}")
+            return False
+        
+
+    def click_on_next_post(self, next_post_href):
+        try:
+            next_post = self.driver.execute_script("""
+                const href = arguments[0];
+                return [...document.querySelectorAll('a')]
+                    .find(el => el.getAttribute('href') === href);
+            """, next_post_href)
+            try:
+                next_post.click()  # tenta clicar normalmente
+            except ElementClickInterceptedException:
+                # Tenta fechar modal genérico se estiver visível
+                try:
+                    modal = self.driver.find_element(
+                        By.CSS_SELECTOR, 'div.generic_dialog.pop_dialog.generic_dialog_modal')
+                    close_btn = modal.find_elements(
+                        By.CSS_SELECTOR, 'button, [role="button"], .x1i10hfl')
+                    for btn in close_btn:
+                        try:
+                            btn.click()
+                            break
+                        except:
+                            continue
+                    # Aguarda o modal sumir
+                    WebDriverWait(self.driver, 5).until(
+                        EC.staleness_of(modal))
+                except Exception:
+                    pass
+                # clique com JavaScript(se o Selenium não conseguir sozinho)
+                self.driver.execute_script(
+                    "arguments[0].click();", next_post)
+            self.loading()
+            self.wait_post_ready()
+            return True
+        except Exception as e:
+            print(f"Erro inesperado em click_on_next_post: \n{e}")
             return False

@@ -13,11 +13,10 @@ def main():
     accounts = ['@uece', '@uecedadepressao', '@uecealunos']
     # searches = ['uece']
     tag_inputs = []
-    tag_inputs.append(accounts)
     tag_inputs.append(hashtags)
+    tag_inputs.append(accounts)
     # tag_inputs.append(searches)
     # tags para raspar
-    num_posts = 1000000
     # numero desejado de posts de cada tag a serem extraidos
     url = 'https://www.instagram.com/'
     # url para login
@@ -29,18 +28,22 @@ def main():
             tag_index = 0
             while (tag_result := instagram_text_scraper.go_to_posts_by_tag(tag_input, tag_index)) is not False:
                 tag_index += 1
-                if tag_result == "Already saved":  # tag já foi raspada
+                if tag_result == "Already saved":  # tag já foi raspada nessa run
                     continue
                 tag = instagram_text_scraper.get_current_tag()
-                instagram_text_scraper.scrape_posts_text(num_posts, tag)
-                print(instagram_text_scraper.web_driver.tag_saver.get_saved_tags())
+                #instagram_text_scraper.traverse_posts()
+                if tag_input.startswith("#"):
+                    num_posts = 500
+                else: 
+                    num_posts = 10000000
+                instagram_text_scraper.scrape_posts_text_v3(tag, num_posts)
+                #print(instagram_text_scraper.web_driver.tag_saver.get_saved_tags())
 
-    instagram_text_scraper.merge_posts("merged_uece_posts_data")
+    instagram_text_scraper.merge_posts("merged_uece")
     logger.close()
     driver.quit()
 
 
 main()
-
-# a partir do ~=276 post, começa a se repetir
+# a partir do ~=276 ou ~=185 post, começa a se repetir
 

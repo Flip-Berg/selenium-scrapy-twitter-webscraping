@@ -64,7 +64,7 @@ class Scraper:
             else: 
                 print("Post atual não é maior que o salvo anteriormente, não será salvo.")
         else:
-            JsonManager.save_on_json(tag, post_data)
+            return JsonManager.save_on_json(tag, post_data)
 
     def check_if_post_is_bigger(self, current_post, saved_post):
         # Compara o total de comentários + respostas
